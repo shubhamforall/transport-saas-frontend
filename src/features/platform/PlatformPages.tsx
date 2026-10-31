@@ -431,10 +431,10 @@ export function PlatformPlansPage() {
     <>
       <PageHeader
         title="Plans"
-        description="Prices, limits and features are configuration, not code. Changes apply to new checkouts."
+        description="Prices, limits and features shown to companies on Billing & plan. Changes apply to new checkouts; the first active plan (lowest sort order) is used for free trials."
         action={
           <Button variant="primary" onClick={() => setEditing('new')}>
-            New plan
+            Add plan
           </Button>
         }
       />
@@ -474,10 +474,24 @@ export function PlatformPlansPage() {
               header: 'Status',
               cell: (p) => <StatusBadge status={p.isActive ? 'ACTIVE' : 'INACTIVE'} />,
             },
+            {
+              header: 'Actions',
+              cell: (p) => (
+                <Button
+                  aria-label={`Edit ${p.name}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setEditing(p);
+                  }}
+                >
+                  Edit
+                </Button>
+              ),
+            },
           ]}
           empty={
             <p className="p-6 text-[13px] text-muted">
-              No plans yet. Companies get no trial until a plan exists.
+              No plans yet. Companies get no free trial until a plan exists. Use “Add plan”.
             </p>
           }
         />
@@ -487,6 +501,68 @@ export function PlatformPlansPage() {
       )}
     </>
   );
+}
+
+type PlanForm = {
+  code: string;
+  name: string;
+  price: string;
+  maxUsers: string;
+  maxVehicles: string;
+  features: string;
+  razorpayPlanId: string;
+  sortOrder: string;
+};
+type PlanErrors = Partial<Record<keyof PlanForm, string>>;
+
+const wholeNumber = (v: string, min: number, max: number) =>
+  /^\d+$/.test(v.trim()) && Number(v) >= min && Number(v) <= max;
+
+/** Same rules as the API, checked before saving so mistakes show next to the field. */
+function validatePlan(f: PlanForm, isNew: boolean): PlanErrors {
+  const e: PlanErrors = {};
+  if (isNew && !/^[a-z0-9-]{2,40}$/.test(f.code.trim()))
+    e.code = 'Use 2-40 lowercase letters, digits or "-", e.g. growth';
+  if (f.name.trim().length < 2) e.name = 'Enter a plan name';
+  else if (f.name.trim().length > 80) e.name = 'At most 80 characters';
+  const price = parseRupees(f.price);
+  if (price === null) e.price = 'Enter a price in rupees, e.g. 999 or 999.50';
+  else if (price > 100_000_000) e.price = 'Price is too large';
+  if (f.maxUsers.trim() && !wholeNumber(f.maxUsers, 1, 10_000))
+    e.maxUsers = 'A whole number from 1 to 10,000, or empty for unlimited';
+  if (f.maxVehicles.trim() && !wholeNumber(f.maxVehicles, 1, 100_000))
+    e.maxVehicles = 'A whole number from 1 to 1,00,000, or empty for unlimited';
+  if (f.sortOrder.trim() && !wholeNumber(f.sortOrder, 0, 1000)) e.sortOrder = '0 to 1000';
+  if (f.razorpayPlanId.trim() && !/^plan_[A-Za-z0-9]{6,40}$/.test(f.razorpayPlanId.trim()))
+    e.razorpayPlanId = 'Razorpay plan ids look like plan_XXXXXXXX';
+  const features = f.features
+    .split('\n')
+    .map((x) => x.trim())
+    .filter(Boolean);
+  if (features.length > 20) e.features = 'Up to 20 features';
+  else if (features.some((x) => x.length > 120))
+    e.features = 'Each feature: at most 120 characters';
+  return e;
+}
+
+/** Maps API field errors (priceMinor, limits.maxUsers, features.3 ...) onto the form fields. */
+function serverPlanErrors(err: unknown): PlanErrors {
+  if (!(err instanceof ApiError) || !err.fieldErrors) return {};
+  const map: Record<string, keyof PlanForm> = {
+    code: 'code',
+    name: 'name',
+    priceMinor: 'price',
+    'limits.maxUsers': 'maxUsers',
+    'limits.maxVehicles': 'maxVehicles',
+    razorpayPlanId: 'razorpayPlanId',
+    sortOrder: 'sortOrder',
+  };
+  const out: PlanErrors = {};
+  for (const [key, messages] of Object.entries(err.fieldErrors)) {
+    const field = map[key] ?? (key.startsWith('features') ? 'features' : undefined);
+    if (field && messages[0]) out[field] ??= messages[0];
+  }
+  return out;
 }
 
 function PlanDialog({ plan, onClose }: { plan: Plan | null; onClose: () => void }) {
@@ -506,14 +582,15 @@ function PlanDialog({ plan, onClose }: { plan: Plan | null; onClose: () => void 
     isActive: plan?.isActive ?? true,
     sortOrder: String(plan?.sortOrder ?? 0),
   });
+  const [fieldErrors, setFieldErrors] = useState<PlanErrors>({});
   const run = useMutation({
     mutationFn: () => {
       const limits: Record<string, number> = {};
       if (f.maxUsers) limits.maxUsers = Number(f.maxUsers);
       if (f.maxVehicles) limits.maxVehicles = Number(f.maxVehicles);
       const body: Record<string, unknown> = {
-        name: f.name,
-        description: f.description || null,
+        name: f.name.trim(),
+        description: f.description.trim() || null,
         priceMinor: parseRupees(f.price),
         billingInterval: f.billingInterval,
         limits,
@@ -527,7 +604,7 @@ function PlanDialog({ plan, onClose }: { plan: Plan | null; onClose: () => void 
       };
       return plan
         ? api(`/platform/plans/${plan.id}`, { method: 'PATCH', body })
-        : api('/platform/plans', { method: 'POST', body: { ...body, code: f.code } });
+        : api('/platform/plans', { method: 'POST', body: { ...body, code: f.code.trim() } });
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['platform', 'plans'] }),
   });
@@ -549,12 +626,22 @@ function PlanDialog({ plan, onClose }: { plan: Plan | null; onClose: () => void 
             loading={run.isPending}
             onClick={async () => {
               setError(null);
+              const problems = validatePlan(f, !plan);
+              setFieldErrors(problems);
+              if (Object.keys(problems).length) {
+                setError('Please fix the highlighted fields.');
+                return;
+              }
               try {
                 await run.mutateAsync();
-                toast.success('Plan saved.');
+                toast.success(plan ? 'Plan updated.' : 'Plan created.');
                 onClose();
               } catch (e) {
-                setError(errText(e));
+                const mapped = serverPlanErrors(e);
+                setFieldErrors(mapped);
+                setError(
+                  Object.keys(mapped).length ? 'Please fix the highlighted fields.' : errText(e),
+                );
               }
             }}
           >
@@ -575,15 +662,30 @@ function PlanDialog({ plan, onClose }: { plan: Plan | null; onClose: () => void 
           disabled={Boolean(plan)}
           value={f.code}
           onChange={set('code')}
-          hint="Lowercase, used in URLs and checkout."
+          placeholder="e.g. growth"
+          error={fieldErrors.code}
+          hint={
+            plan
+              ? 'The code cannot be changed.'
+              : 'Lowercase letters, digits or "-". Cannot be changed later.'
+          }
         />
-        <TextField label="Name" required value={f.name} onChange={set('name')} />
+        <TextField
+          label="Name"
+          required
+          value={f.name}
+          onChange={set('name')}
+          placeholder="e.g. Growth"
+          error={fieldErrors.name}
+        />
         <TextField
           label="Price (₹)"
           required
           inputMode="decimal"
           value={f.price}
           onChange={set('price')}
+          placeholder="e.g. 999"
+          error={fieldErrors.price}
         />
         <SelectField
           label="Billing interval"
@@ -599,6 +701,7 @@ function PlanDialog({ plan, onClose }: { plan: Plan | null; onClose: () => void 
           value={f.maxUsers}
           onChange={set('maxUsers')}
           hint="Empty = unlimited"
+          error={fieldErrors.maxUsers}
         />
         <TextField
           label="Max vehicles"
@@ -606,11 +709,13 @@ function PlanDialog({ plan, onClose }: { plan: Plan | null; onClose: () => void 
           value={f.maxVehicles}
           onChange={set('maxVehicles')}
           hint="Empty = unlimited"
+          error={fieldErrors.maxVehicles}
         />
         <TextField
           label="Razorpay plan id"
           value={f.razorpayPlanId}
           onChange={set('razorpayPlanId')}
+          error={fieldErrors.razorpayPlanId}
           hint={
             plan?.onlineCheckout
               ? 'Set. Leave empty to keep.'
@@ -622,6 +727,8 @@ function PlanDialog({ plan, onClose }: { plan: Plan | null; onClose: () => void 
           inputMode="numeric"
           value={f.sortOrder}
           onChange={set('sortOrder')}
+          hint="Lower shows first. The first active plan is used for free trials."
+          error={fieldErrors.sortOrder}
         />
         <TextField label="Description" full value={f.description} onChange={set('description')} />
         <TextAreaField
@@ -629,6 +736,7 @@ function PlanDialog({ plan, onClose }: { plan: Plan | null; onClose: () => void 
           full
           value={f.features}
           onChange={set('features')}
+          error={fieldErrors.features}
         />
         <label className="flex items-center gap-2 text-[13px] sm:col-span-2">
           <input
