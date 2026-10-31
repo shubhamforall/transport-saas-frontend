@@ -41,7 +41,7 @@ const T = 'ctenant000000000000000001';
 function tenant(role: Role): Tenant {
   return {
     id: T,
-    name: 'Patil Transport Co.',
+    name: 'Deccan Roadways Co.',
     legalName: null,
     phone: null,
     email: null,
@@ -75,12 +75,12 @@ function signedInAs(role: Role) {
   server.on('GET', '/auth/me', {
     status: 200,
     body: {
-      user: { id: 'u1', name: 'Shubham Patil', email: 's@example.com', isPlatformAdmin: false },
+      user: { id: 'u1', name: 'Ravi Sharma', email: 's@example.com', isPlatformAdmin: false },
       memberships: [
         {
           membershipId: 'm1',
           tenantId: T,
-          tenantName: 'Patil Transport Co.',
+          tenantName: 'Deccan Roadways Co.',
           role,
           permissions: role === 'VIEWER' ? VIEWER : ALL,
         },
@@ -208,7 +208,7 @@ describe('invoices', () => {
       taxType: 'INTRA_STATE',
       placeOfSupplyStateCode: '27',
       billTo: { name: 'ABC Ltd.' },
-      from: { name: 'Patil Transport Co.', stateCode: '27' },
+      from: { name: 'Deccan Roadways Co.', stateCode: '27' },
       currency: 'INR',
       subtotalMinor: 0,
       discountMinor: 0,
@@ -350,11 +350,11 @@ describe('account menu and plan card', () => {
     server.on('POST', '/auth/logout', { status: 204 });
     const router = renderAt(`/t/${T}/dashboard`);
 
-    const button = await screen.findByRole('button', { name: /Account menu for Shubham Patil/ });
+    const button = await screen.findByRole('button', { name: /Account menu for Ravi Sharma/ });
     expect(screen.queryByRole('menu')).not.toBeInTheDocument();
     await userEvent.click(button);
     const menu = screen.getByRole('menu');
-    expect(within(menu).getByText('Shubham Patil')).toBeInTheDocument();
+    expect(within(menu).getByText('Ravi Sharma')).toBeInTheDocument();
     expect(within(menu).getByText('s@example.com')).toBeInTheDocument();
     for (const name of ['My profile', 'Change password', 'Billing & plan', 'Sign out']) {
       expect(within(menu).getByRole('menuitem', { name })).toBeInTheDocument();
@@ -415,11 +415,11 @@ describe('account menu and plan card', () => {
     renderAt(`/t/${T}/profile`);
     const name = await screen.findByLabelText(/Full name/);
     await userEvent.clear(name);
-    await userEvent.type(name, 'Shubham R Patil');
+    await userEvent.type(name, 'Ravi K Sharma');
     await userEvent.click(screen.getByRole('button', { name: 'Save changes' }));
     expect(await screen.findByText('Your details were saved.')).toBeInTheDocument();
     expect(server.calls.find((c) => c.method === 'PATCH')?.body).toEqual({
-      name: 'Shubham R Patil',
+      name: 'Ravi K Sharma',
     });
 
     await userEvent.type(screen.getByLabelText(/Current password/), 'wrong-one');

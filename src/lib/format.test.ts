@@ -26,7 +26,7 @@ describe('formatDate', () => {
 
 describe('initials', () => {
   it('uses first and last name', () => {
-    expect(initials('Shubham Patil')).toBe('SP');
+    expect(initials('Ravi Sharma')).toBe('RS');
     expect(initials('  asha  ')).toBe('A');
     expect(initials('')).toBe('?');
   });

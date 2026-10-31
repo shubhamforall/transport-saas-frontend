@@ -41,7 +41,7 @@ const VIEWER_PERMISSIONS: Tenant['myPermissions'] = [
 function tenant(role: Role = 'OWNER'): Tenant {
   return {
     id: 'ctenant000000000000000001',
-    name: 'Patil Transport Co.',
+    name: 'Deccan Roadways Co.',
     legalName: null,
     phone: null,
     email: null,
@@ -72,7 +72,7 @@ function tenant(role: Role = 'OWNER'): Tenant {
 
 function me(memberships: MeResponse['memberships'] = []): MeResponse {
   return {
-    user: { id: 'u1', name: 'Shubham Patil', email: 'shubham@example.com', isPlatformAdmin: false },
+    user: { id: 'u1', name: 'Ravi Sharma', email: 'ravi@example.com', isPlatformAdmin: false },
     memberships,
   };
 }
@@ -172,7 +172,7 @@ describe('authentication flow', () => {
     server.on('POST', '/auth/refresh', { status: 401 });
     server.on('POST', '/auth/register', {
       status: 202,
-      body: { verificationRequired: true, email: 'shubham@example.com', emailSent: true },
+      body: { verificationRequired: true, email: 'ravi@example.com', emailSent: true },
     });
     server.on('POST', '/auth/verify-email', (init) =>
       (JSON.parse(init.body as string) as { code: string }).code === '482913'
@@ -189,13 +189,13 @@ describe('authentication flow', () => {
           },
     );
     const router = renderApp('/sign-up');
-    await userEvent.type(await screen.findByLabelText(/Full name/), 'Shubham Patil');
-    await userEvent.type(screen.getByLabelText(/Work email/), 'shubham@example.com');
+    await userEvent.type(await screen.findByLabelText(/Full name/), 'Ravi Sharma');
+    await userEvent.type(screen.getByLabelText(/Work email/), 'ravi@example.com');
     await userEvent.type(screen.getByLabelText(/Password/), 'Str0ng-Passw0rd!');
     await userEvent.click(screen.getByRole('button', { name: 'Create account' }));
 
     expect(await screen.findByRole('heading', { name: 'Check your email' })).toBeInTheDocument();
-    expect(screen.getByText('shubham@example.com')).toBeInTheDocument();
+    expect(screen.getByText('ravi@example.com')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Send a new code in \d+s/ })).toBeDisabled();
 
     // A wrong code shows the remaining attempts; six digits submit without a click.
@@ -231,21 +231,19 @@ describe('authentication flow', () => {
     server.on('GET', '/invitations/lookup', {
       status: 200,
       body: {
-        companyName: 'Patil Transport',
-        email: 'shubham@example.com',
+        companyName: 'Deccan Roadways',
+        email: 'ravi@example.com',
         role: 'VIEWER',
         expired: false,
         accepted: false,
       },
     });
     const next = '/invitations/accept?token=invite-token-0123456789abcdef';
-    const router = renderApp(
-      `/sign-up?email=shubham%40example.com&next=${encodeURIComponent(next)}`,
-    );
-    await userEvent.type(await screen.findByLabelText(/Full name/), 'Shubham Patil');
+    const router = renderApp(`/sign-up?email=ravi%40example.com&next=${encodeURIComponent(next)}`);
+    await userEvent.type(await screen.findByLabelText(/Full name/), 'Ravi Sharma');
     await userEvent.type(screen.getByLabelText(/Password/), 'Str0ng-Passw0rd!');
     await userEvent.click(screen.getByRole('button', { name: 'Create account' }));
-    expect(await screen.findByRole('button', { name: 'Join Patil Transport' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Join Deccan Roadways' })).toBeInTheDocument();
     expect(router.state.location.pathname).toBe('/invitations/accept');
     const call = server.calls.find((c) => c.path === '/auth/register')!;
     expect(call.body).toMatchObject({ invitationToken: 'invite-token-0123456789abcdef' });
@@ -277,14 +275,14 @@ describe('authentication flow', () => {
     const router = renderApp('/onboarding');
     await userEvent.type(
       await screen.findByLabelText(/Company display name/),
-      'Patil Transport Co.',
+      'Deccan Roadways Co.',
     );
     await userEvent.click(screen.getByRole('button', { name: 'Create company workspace' }));
 
-    expect(await screen.findByRole('heading', { name: /Shubham/ })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /Ravi/ })).toBeInTheDocument();
     expect(router.state.location.pathname).toBe(`/t/${t.id}/dashboard`);
     const create = server.calls.find((c) => c.method === 'POST' && c.path === '/tenants')!;
-    expect(create.body).toMatchObject({ name: 'Patil Transport Co.', gstin: null });
+    expect(create.body).toMatchObject({ name: 'Deccan Roadways Co.', gstin: null });
   });
 });
 
@@ -387,7 +385,7 @@ describe('workspace shell', () => {
     const dialog = await screen.findByRole('dialog', { name: 'Create a new company' });
     // Still on the same page; the dashboard stays behind the popup.
     expect(router.state.location.pathname).toBe(`/t/${t.id}/dashboard`);
-    expect(screen.getByRole('heading', { name: /Shubham/ })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Ravi/ })).toBeInTheDocument();
 
     await userEvent.type(
       within(dialog).getByLabelText(/Company display name/),

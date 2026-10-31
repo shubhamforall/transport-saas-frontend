@@ -21,7 +21,7 @@ export function CompanyFields({ register, errors, disabled, variant = 'full' }: 
           <TextField
             label="Company display name"
             required
-            placeholder="e.g. Patil Transport Co."
+            placeholder="e.g. Deccan Roadways Co."
             error={errors.name?.message}
             {...register('name')}
           />

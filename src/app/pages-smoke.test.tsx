@@ -39,7 +39,7 @@ const paged = <X,>(items: X[]) => ({
 
 const tenant = {
   id: T,
-  name: 'Patil Transport Co.',
+  name: 'Deccan Roadways Co.',
   legalName: null,
   phone: null,
   email: null,
@@ -162,7 +162,7 @@ const invoice = {
   taxType: 'INTRA_STATE',
   placeOfSupplyStateCode: '27',
   billTo: { name: 'ABC Ltd.', city: 'Mumbai' },
-  from: { name: 'Patil Transport Co.', city: 'Pune', stateCode: '27' },
+  from: { name: 'Deccan Roadways Co.', city: 'Pune', stateCode: '27' },
   currency: 'INR',
   subtotalMinor: 1_250_000,
   discountMinor: 0,
@@ -240,7 +240,7 @@ beforeEach(() => {
   server.on('GET', '/auth/me', {
     status: 200,
     body: {
-      user: { id: 'u1', name: 'Shubham Patil', email: 's@example.com', isPlatformAdmin: true },
+      user: { id: 'u1', name: 'Ravi Sharma', email: 's@example.com', isPlatformAdmin: true },
       memberships: [
         {
           membershipId: 'm1',
@@ -382,7 +382,7 @@ beforeEach(() => {
           id: 'm1',
           role: 'OWNER',
           createdAt: '2026-10-28T00:00:00Z',
-          user: { id: 'u1', name: 'Shubham Patil', email: 's@example.com' },
+          user: { id: 'u1', name: 'Ravi Sharma', email: 's@example.com' },
         },
         {
           id: 'm2',
@@ -475,7 +475,7 @@ beforeEach(() => {
     'GET',
     '/invitations/lookup',
     ok({
-      companyName: 'Patil Transport Co.',
+      companyName: 'Deccan Roadways Co.',
       email: 's@example.com',
       role: 'VIEWER',
       expired: false,
@@ -487,7 +487,7 @@ afterEach(() => server.restore());
 
 const base = `/t/${T}`;
 const pages: [string, RegExp][] = [
-  [`${base}/dashboard`, /Shubham/],
+  [`${base}/dashboard`, /Ravi/],
   [`${base}/customers`, /^Customers$/],
   [`${base}/customers/new`, /Create customer/],
   [`${base}/customers/${customer.id}`, /ABC Ltd\./],
@@ -509,12 +509,12 @@ const pages: [string, RegExp][] = [
   [`${base}/settings`, /Company settings/],
   [`${base}/profile`, /My profile/],
   ['/platform/tenants', /^Companies$/],
-  [`/platform/tenants/${T}`, /Patil Transport Co\./],
+  [`/platform/tenants/${T}`, /Deccan Roadways Co\./],
   ['/platform/plans', /^Plans$/],
   ['/platform/subscriptions', /^Subscriptions$/],
   ['/platform/webhooks', /Webhook events/],
   ['/platform/audit', /Audit log/],
-  ['/invitations/accept?token=abcdefghijklmnopqrstuvwxyz', /Join Patil Transport Co\./],
+  ['/invitations/accept?token=abcdefghijklmnopqrstuvwxyz', /Join Deccan Roadways Co\./],
 ];
 
 describe('every page renders', () => {
