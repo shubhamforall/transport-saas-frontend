@@ -1,11 +1,13 @@
 import {
   forwardRef,
   useId,
+  useState,
   type InputHTMLAttributes,
   type ReactNode,
   type SelectHTMLAttributes,
   type TextareaHTMLAttributes,
 } from 'react';
+import { Eye, EyeOff } from 'lucide-react';
 import { cn } from '@/lib/cn';
 
 const controlClass =
@@ -94,6 +96,58 @@ export const TextField = forwardRef<HTMLInputElement, TextFieldProps>(function T
     </FieldShell>
   );
 });
+
+export type PasswordFieldProps = Omit<TextFieldProps, 'type'>;
+
+/** Password input with a show/hide (eye) button. */
+export const PasswordField = forwardRef<HTMLInputElement, PasswordFieldProps>(
+  function PasswordField({ label, hint, error, full, id, className, required, ...rest }, ref) {
+    const autoId = useId();
+    const fieldId = id ?? autoId;
+    const [visible, setVisible] = useState(false);
+    return (
+      <FieldShell
+        id={fieldId}
+        label={label}
+        required={required}
+        hint={hint}
+        error={error}
+        full={full}
+      >
+        <div className="relative">
+          <input
+            ref={ref}
+            id={fieldId}
+            type={visible ? 'text' : 'password'}
+            required={required}
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
+            aria-invalid={error ? true : undefined}
+            aria-describedby={describedBy(fieldId, error, hint)}
+            className={cn(controlClass, 'pr-11', className)}
+            {...rest}
+          />
+          <button
+            type="button"
+            onClick={() => setVisible((v) => !v)}
+            aria-label={visible ? 'Hide password' : 'Show password'}
+            aria-pressed={visible}
+            aria-controls={fieldId}
+            title={visible ? 'Hide password' : 'Show password'}
+            className="absolute inset-y-0 right-0 grid w-11 place-items-center rounded-r-lg text-slate-400 outline-none hover:text-slate-700 focus-visible:text-brand"
+          >
+            {visible ? (
+              <EyeOff className="size-4.5" aria-hidden />
+            ) : (
+              <Eye className="size-4.5" aria-hidden />
+            )}
+          </button>
+        </div>
+      </FieldShell>
+    );
+  },
+);
 
 export type SelectFieldProps = CommonProps & SelectHTMLAttributes<HTMLSelectElement>;
 

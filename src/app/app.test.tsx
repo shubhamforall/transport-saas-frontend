@@ -125,6 +125,34 @@ describe('authentication flow', () => {
     expect(server.calls.some((c) => c.path === '/auth/login')).toBe(false);
   });
 
+  it('the eye button shows and hides the password', async () => {
+    server.on('GET', '/auth/me', unauthorized);
+    server.on('POST', '/auth/refresh', { status: 401 });
+    renderApp('/sign-in');
+    const input = await screen.findByLabelText(/^Password/);
+    await userEvent.type(input, 'Secret-123');
+    expect(input).toHaveAttribute('type', 'password');
+    await userEvent.click(screen.getByRole('button', { name: 'Show password' }));
+    expect(input).toHaveAttribute('type', 'text');
+    expect(input).toHaveValue('Secret-123');
+    await userEvent.click(screen.getByRole('button', { name: 'Hide password' }));
+    expect(input).toHaveAttribute('type', 'password');
+  });
+
+  it('sign-up checks name, email and password before calling the API', async () => {
+    server.on('GET', '/auth/me', unauthorized);
+    server.on('POST', '/auth/refresh', { status: 401 });
+    renderApp('/sign-up');
+    await userEvent.type(await screen.findByLabelText(/Full name/), 'A');
+    await userEvent.type(screen.getByLabelText(/Work email/), 'not-an-email');
+    await userEvent.type(screen.getByLabelText(/^Password/), '        ');
+    await userEvent.click(screen.getByRole('button', { name: 'Create account' }));
+    expect(await screen.findByText('Enter your full name')).toBeInTheDocument();
+    expect(screen.getByText('Enter a valid email address')).toBeInTheDocument();
+    expect(screen.getByText('Password cannot be only spaces')).toBeInTheDocument();
+    expect(server.calls.some((c) => c.path === '/auth/register')).toBe(false);
+  });
+
   it('shows the server message for wrong credentials', async () => {
     server.on('GET', '/auth/me', unauthorized);
     server.on('POST', '/auth/refresh', { status: 401 });

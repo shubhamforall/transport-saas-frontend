@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Link, useNavigate, useSearchParams } from 'react-router';
 import { AuthLayout } from '@/components/layout/AuthLayout';
 import { Button } from '@/components/ui/Button';
-import { TextField } from '@/components/ui/Field';
+import { PasswordField, TextField } from '@/components/ui/Field';
 import { Notice } from '@/components/ui/Feedback';
 import { applyServerErrors } from '@/lib/form-errors';
 import { authApi, isPendingVerification } from './api';
@@ -76,9 +76,8 @@ export function SignUpPage() {
           error={errors.email?.message}
           {...register('email')}
         />
-        <TextField
+        <PasswordField
           label="Password"
-          type="password"
           autoComplete="new-password"
           required
           hint="At least 8 characters."

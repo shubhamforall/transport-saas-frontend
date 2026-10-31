@@ -12,6 +12,7 @@ import { useToast } from '@/components/ui/toast-context';
 import { formatPaise } from '@/lib/format';
 import { applyServerErrors } from '@/lib/form-errors';
 import { paiseToInput, parseRupees } from '@/lib/money';
+import { rupeesField } from '@/lib/money-field';
 import { useTenantMutation, useTenantQuery } from '@/features/tenants/use-tenant-api';
 import type { InvoiceListItem, Paged, Payment } from '@/types/api';
 
@@ -21,7 +22,11 @@ const today = () =>
 const schema = z.object({
   invoiceId: z.string().min(1, 'Choose an invoice'),
   paymentDate: z.string().min(1, 'Enter the payment date'),
-  amount: z.string().refine((v) => (parseRupees(v) ?? 0) > 0, 'Enter the amount received'),
+  amount: rupeesField({
+    required: true,
+    positive: true,
+    requiredMessage: 'Enter the amount received',
+  }),
   method: z.string(),
   reference: z.string().trim().max(100),
   notes: z.string().trim().max(1000),

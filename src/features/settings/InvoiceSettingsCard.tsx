@@ -3,6 +3,7 @@ import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
+import { daysField } from '@/lib/money-field';
 import { Button } from '@/components/ui/Button';
 import { Card, CardBody, CardFooter, CardHeader } from '@/components/ui/Card';
 import { FieldGrid, SelectField, TextAreaField, TextField } from '@/components/ui/Field';
@@ -25,7 +26,7 @@ const schema = z.object({
     .trim()
     .toUpperCase()
     .regex(/^[A-Z0-9]{1,5}$/, '1-5 letters or digits'),
-  defaultPaymentTermsDays: z.string().regex(/^\d{1,3}$/, 'Days, 0-365'),
+  defaultPaymentTermsDays: daysField(true),
   defaultTaxRateBps: z.string(),
   defaultSacCode: z
     .string()

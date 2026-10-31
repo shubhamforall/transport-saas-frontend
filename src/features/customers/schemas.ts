@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { stateName } from '@/lib/indian-states';
 import { GSTIN_REGEX } from '@/features/tenants/schemas';
+import { daysField } from '@/lib/money-field';
 import type { Customer } from '@/types/api';
 
 // Mirrors server validation; the API re-validates everything.
@@ -19,6 +20,7 @@ export const customerSchema = z
     email: z
       .string()
       .trim()
+      .max(254, 'Email is too long')
       .refine((v) => v === '' || z.email().safeParse(v).success, 'Enter a valid email address'),
     gstin: z
       .string()
@@ -33,7 +35,7 @@ export const customerSchema = z
       .string()
       .trim()
       .refine((v) => v === '' || /^[1-9][0-9]{5}$/.test(v), 'Enter a valid 6-digit PIN code'),
-    paymentTermsDays: z.string(),
+    paymentTermsDays: daysField(),
     notes: z.string().trim().max(2000),
   })
   .refine((v) => !v.gstin || !v.stateCode || v.gstin.toUpperCase().startsWith(v.stateCode), {

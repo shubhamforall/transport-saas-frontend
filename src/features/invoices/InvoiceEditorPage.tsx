@@ -35,14 +35,9 @@ import {
 import { useCurrentTenant } from '@/features/tenants/tenant-context';
 import { useTenantMutation, useTenantQuery } from '@/features/tenants/use-tenant-api';
 import type { Invoice, TaxType } from '@/types/api';
+import { rupeesField } from '@/lib/money-field';
 
-const money = (required: boolean) =>
-  z
-    .string()
-    .refine(
-      (v) => (v.trim() === '' ? !required : parseRupees(v) !== null),
-      'Enter an amount in rupees',
-    );
+const money = (required: boolean) => rupeesField({ required });
 
 const line = z.object({
   description: z.string().trim().min(1, 'Describe the item').max(500),

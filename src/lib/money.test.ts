@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { daysField, rupeesField } from './money-field';
 import { milliToInput, paiseToInput, parseMilli, parseRupees } from './money';
 import { previewTotals } from './invoice-calc';
 
@@ -62,5 +63,36 @@ describe('invoice preview matches the server maths', () => {
         'NONE',
       ).grandTotalMinor,
     ).toBe(8333);
+  });
+});
+
+describe('rupeesField', () => {
+  const msg = (schema: ReturnType<typeof rupeesField>, v: string) =>
+    schema.safeParse(v).error?.issues[0]?.message;
+
+  it('accepts normal amounts and blank when optional', () => {
+    expect(rupeesField().safeParse('').success).toBe(true);
+    expect(rupeesField().safeParse('12,000.50').success).toBe(true);
+    expect(rupeesField({ required: true }).safeParse('1,00,00,000').success).toBe(true);
+  });
+
+  it('rejects blank when required, bad text, more than ₹1 crore, and zero when positive', () => {
+    expect(msg(rupeesField({ required: true, requiredMessage: 'Need it' }), ' ')).toBe('Need it');
+    expect(msg(rupeesField(), 'abc')).toMatch(/valid amount/);
+    expect(msg(rupeesField(), '-5')).toMatch(/valid amount/);
+    expect(msg(rupeesField(), '12.345')).toMatch(/valid amount/);
+    expect(msg(rupeesField(), '10000000.01')).toMatch(/1,00,00,000/);
+    expect(msg(rupeesField({ positive: true }), '0')).toMatch(/more than zero/);
+  });
+});
+
+describe('daysField', () => {
+  it('allows 0 to 365 whole days', () => {
+    expect(daysField().safeParse('').success).toBe(true);
+    expect(daysField().safeParse('0').success).toBe(true);
+    expect(daysField().safeParse('365').success).toBe(true);
+    for (const bad of ['366', '999', '-1', '1.5', 'abc'])
+      expect(daysField().safeParse(bad).success).toBe(false);
+    expect(daysField(true).safeParse('').success).toBe(false);
   });
 });

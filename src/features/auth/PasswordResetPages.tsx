@@ -5,7 +5,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router';
 import { z } from 'zod';
 import { AuthLayout } from '@/components/layout/AuthLayout';
 import { Button } from '@/components/ui/Button';
-import { TextField } from '@/components/ui/Field';
+import { PasswordField, TextField } from '@/components/ui/Field';
 import { Notice } from '@/components/ui/Feedback';
 import { useToast } from '@/components/ui/toast-context';
 import { api } from '@/lib/api';
@@ -125,18 +125,16 @@ export function ResetPasswordPage() {
       ) : (
         <form onSubmit={onSubmit} noValidate className="flex flex-col gap-4">
           {formError && <Notice tone="error">{formError}</Notice>}
-          <TextField
+          <PasswordField
             label="New password"
-            type="password"
             autoComplete="new-password"
             required
             hint="At least 8 characters."
             error={errors.password?.message}
             {...register('password')}
           />
-          <TextField
+          <PasswordField
             label="Confirm new password"
-            type="password"
             autoComplete="new-password"
             required
             error={errors.confirm?.message}

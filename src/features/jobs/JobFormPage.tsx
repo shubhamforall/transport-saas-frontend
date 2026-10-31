@@ -29,17 +29,12 @@ import {
   parseMilli,
   parseRupees,
 } from '@/lib/money';
+import { rupeesField } from '@/lib/money-field';
 import { useCurrentTenant } from '@/features/tenants/tenant-context';
 import { useTenantMutation, useTenantQuery } from '@/features/tenants/use-tenant-api';
 import type { Customer, Job, Paged, Vehicle } from '@/types/api';
 
-const rupees = (required: boolean) =>
-  z
-    .string()
-    .refine(
-      (v) => (v.trim() === '' ? !required : parseRupees(v) !== null),
-      required ? 'Enter an amount in rupees' : 'Enter a valid amount',
-    );
+const rupees = (required: boolean) => rupeesField({ required });
 
 const schema = z
   .object({
@@ -87,6 +82,15 @@ const schema = z
       message: 'Delivery cannot be before pickup',
       path: ['plannedDeliveryDate'],
     },
+  )
+  .refine(
+    (v) => {
+      const gross =
+        (parseRupees(v.freight) ?? 0) +
+        v.charges.reduce((sum, c) => sum + (parseRupees(c.amount) ?? 0), 0);
+      return (parseRupees(v.discount) ?? 0) <= gross;
+    },
+    { message: 'Discount cannot be more than freight plus charges', path: ['discount'] },
   );
 type Values = z.input<typeof schema>;
 

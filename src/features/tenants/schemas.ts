@@ -23,6 +23,7 @@ export const companySchema = z
     email: z
       .string()
       .trim()
+      .max(254, 'Email is too long')
       .refine((v) => v === '' || z.email().safeParse(v).success, 'Enter a valid email address'),
     addressLine1: optional(200),
     addressLine2: optional(200),

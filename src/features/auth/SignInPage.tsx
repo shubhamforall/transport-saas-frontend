@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Link, useNavigate, useSearchParams } from 'react-router';
 import { AuthLayout } from '@/components/layout/AuthLayout';
 import { Button } from '@/components/ui/Button';
-import { TextField } from '@/components/ui/Field';
+import { PasswordField, TextField } from '@/components/ui/Field';
 import { Notice } from '@/components/ui/Feedback';
 import { ApiError } from '@/lib/api';
 import { applyServerErrors } from '@/lib/form-errors';
@@ -65,9 +65,8 @@ export function SignInPage() {
           error={errors.email?.message}
           {...register('email')}
         />
-        <TextField
+        <PasswordField
           label="Password"
-          type="password"
           autoComplete="current-password"
           required
           error={errors.password?.message}

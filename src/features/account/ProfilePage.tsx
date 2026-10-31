@@ -5,7 +5,7 @@ import { useLocation } from 'react-router';
 import { z } from 'zod';
 import { Button } from '@/components/ui/Button';
 import { Card, CardBody, CardFooter, CardHeader } from '@/components/ui/Card';
-import { TextField } from '@/components/ui/Field';
+import { PasswordField, TextField } from '@/components/ui/Field';
 import { Notice } from '@/components/ui/Feedback';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { useToast } from '@/components/ui/toast-context';
@@ -143,27 +143,24 @@ function PasswordCard() {
         />
         <CardBody className="flex flex-col gap-4">
           {formError && <Notice tone="error">{formError}</Notice>}
-          <TextField
+          <PasswordField
             label="Current password"
-            type="password"
             autoComplete="current-password"
             required
             error={errors.currentPassword?.message}
             {...register('currentPassword')}
           />
           <div className="grid gap-4 sm:grid-cols-2">
-            <TextField
+            <PasswordField
               label="New password"
-              type="password"
               autoComplete="new-password"
               required
               hint="At least 8 characters."
               error={errors.newPassword?.message}
               {...register('newPassword')}
             />
-            <TextField
+            <PasswordField
               label="Confirm new password"
-              type="password"
               autoComplete="new-password"
               required
               error={errors.confirm?.message}

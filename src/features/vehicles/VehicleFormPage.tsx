@@ -23,6 +23,7 @@ const schema = z.object({
     .string()
     .trim()
     .min(1, 'Enter the registration number')
+    .max(20, 'Registration number is too long')
     .refine((v) => {
       const n = v.toUpperCase().replace(/[^A-Z0-9]/g, '');
       return /^[A-Z0-9]{4,12}$/.test(n) && /[A-Z]/.test(n) && /[0-9]/.test(n);
