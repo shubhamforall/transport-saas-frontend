@@ -323,3 +323,115 @@ describe('subscription', () => {
     await waitFor(() => expect(router.state.location.pathname).not.toBe('/platform/tenants'));
   });
 });
+
+describe('account menu and plan card', () => {
+  const trial = {
+    subscription: {
+      id: 's1',
+      status: 'TRIAL',
+      provider: 'NONE',
+      plan: { name: 'Growth' },
+      trialEndsAt: '2099-11-30T00:00:00Z',
+      currentPeriodStart: null,
+      currentPeriodEnd: null,
+      cancelAtPeriodEnd: false,
+    },
+    pendingCheckout: null,
+    access: { mode: 'FULL', reason: null, fullAccessUntil: null },
+    usage: { vehicles: 0, users: 1 },
+    limits: {},
+    onlinePaymentsAvailable: false,
+  };
+
+  it('the avatar opens a menu with name, email and account actions; sign out works', async () => {
+    signedInAs('OWNER');
+    server.on('GET', `/tenants/${T}/dashboard`, { status: 200, body: null });
+    server.on('GET', `/tenants/${T}/subscription`, { status: 200, body: trial });
+    server.on('POST', '/auth/logout', { status: 204 });
+    const router = renderAt(`/t/${T}/dashboard`);
+
+    const button = await screen.findByRole('button', { name: /Account menu for Shubham Patil/ });
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+    await userEvent.click(button);
+    const menu = screen.getByRole('menu');
+    expect(within(menu).getByText('Shubham Patil')).toBeInTheDocument();
+    expect(within(menu).getByText('s@example.com')).toBeInTheDocument();
+    for (const name of ['My profile', 'Change password', 'Billing & plan', 'Sign out']) {
+      expect(within(menu).getByRole('menuitem', { name })).toBeInTheDocument();
+    }
+    expect(within(menu).queryByRole('menuitem', { name: 'Super Admin' })).not.toBeInTheDocument();
+
+    await userEvent.keyboard('{Escape}');
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+
+    await userEvent.click(button);
+    await userEvent.click(screen.getByRole('menuitem', { name: 'My profile' }));
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'My profile' }),
+    ).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe(`/t/${T}/profile`);
+
+    await userEvent.click(screen.getByRole('button', { name: /Account menu/ }));
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Sign out' }));
+    expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeInTheDocument();
+    expect(server.calls.some((c) => c.path === '/auth/logout')).toBe(true);
+  });
+
+  it('the sidebar corner shows the current plan', async () => {
+    signedInAs('OWNER');
+    server.on('GET', `/tenants/${T}/dashboard`, { status: 200, body: null });
+    server.on('GET', `/tenants/${T}/subscription`, { status: 200, body: trial });
+    renderAt(`/t/${T}/dashboard`);
+    const card = await screen.findByRole('link', { name: /Current plan\s*Growth/ });
+    expect(card).toHaveAttribute('href', `/t/${T}/billing`);
+    expect(card).toHaveTextContent('Free trial · ends 30 Nov');
+  });
+
+  it('profile page saves the name and changes the password', async () => {
+    signedInAs('OWNER');
+    server.on('GET', `/tenants/${T}/subscription`, { status: 200, body: trial });
+    server.on('PATCH', '/auth/me', (init) => ({
+      status: 200,
+      body: {
+        user: {
+          id: 'u1',
+          name: (JSON.parse(init.body as string) as { name: string }).name,
+          email: 's@example.com',
+          isPlatformAdmin: false,
+        },
+        memberships: [],
+      },
+    }));
+    server.on('POST', '/auth/change-password', {
+      status: 400,
+      body: {
+        error: {
+          code: 'WRONG_PASSWORD',
+          message: 'Your current password is not correct.',
+          fieldErrors: { currentPassword: ['Current password is not correct'] },
+        },
+      },
+    });
+    renderAt(`/t/${T}/profile`);
+    const name = await screen.findByLabelText(/Full name/);
+    await userEvent.clear(name);
+    await userEvent.type(name, 'Shubham R Patil');
+    await userEvent.click(screen.getByRole('button', { name: 'Save changes' }));
+    expect(await screen.findByText('Your details were saved.')).toBeInTheDocument();
+    expect(server.calls.find((c) => c.method === 'PATCH')?.body).toEqual({
+      name: 'Shubham R Patil',
+    });
+
+    await userEvent.type(screen.getByLabelText(/Current password/), 'wrong-one');
+    await userEvent.type(screen.getByLabelText(/^New password/), 'Brand-New-Pass1');
+    await userEvent.type(screen.getByLabelText(/Confirm new password/), 'Different-Pass1');
+    await userEvent.click(screen.getByRole('button', { name: 'Change password' }));
+    expect(await screen.findByText('Passwords do not match')).toBeInTheDocument();
+    expect(server.calls.some((c) => c.path === '/auth/change-password')).toBe(false);
+
+    await userEvent.clear(screen.getByLabelText(/Confirm new password/));
+    await userEvent.type(screen.getByLabelText(/Confirm new password/), 'Brand-New-Pass1');
+    await userEvent.click(screen.getByRole('button', { name: 'Change password' }));
+    expect(await screen.findByText('Current password is not correct')).toBeInTheDocument();
+  });
+});

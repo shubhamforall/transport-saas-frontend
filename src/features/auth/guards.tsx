@@ -1,6 +1,7 @@
-import { Navigate, Outlet, useLocation } from 'react-router';
+import { Navigate, Outlet, useLocation, useSearchParams } from 'react-router';
 import { Button } from '@/components/ui/Button';
 import { EmptyState, Spinner } from '@/components/ui/Feedback';
+import { safeNextPath } from './safe-next';
 import { homePathFor, useSession } from './session';
 
 function FullPage({ children }: { children: React.ReactNode }) {
@@ -41,9 +42,13 @@ export function RequireAuth() {
   return <Outlet />;
 }
 
-/** Sign-in/up pages: signed-in users are sent to their workspace instead. */
+/**
+ * Sign-in/up pages: signed-in users are sent on, to a safe ?next= (e.g. an invitation they were
+ * accepting) or else their workspace.
+ */
 export function RedirectIfSignedIn() {
   const { data, isPending, isError, refetch } = useSession();
+  const [params] = useSearchParams();
   if (isPending)
     return (
       <FullPage>
@@ -51,7 +56,7 @@ export function RedirectIfSignedIn() {
       </FullPage>
     );
   if (isError) return <SessionError retry={() => void refetch()} />;
-  if (data) return <Navigate to={homePathFor(data)} replace />;
+  if (data) return <Navigate to={safeNextPath(params.get('next')) ?? homePathFor(data)} replace />;
   return <Outlet />;
 }
 

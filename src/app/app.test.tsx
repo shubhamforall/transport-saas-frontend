@@ -139,17 +139,88 @@ describe('authentication flow', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Email or password is incorrect.');
   });
 
-  it('a new user without a company is sent to onboarding after sign-up', async () => {
+  it('sign-up asks for the emailed code, then sends a new user to onboarding', async () => {
     server.on('GET', '/auth/me', unauthorized);
     server.on('POST', '/auth/refresh', { status: 401 });
-    server.on('POST', '/auth/register', { status: 201, body: me() });
+    server.on('POST', '/auth/register', {
+      status: 202,
+      body: { verificationRequired: true, email: 'shubham@example.com', emailSent: true },
+    });
+    server.on('POST', '/auth/verify-email', (init) =>
+      (JSON.parse(init.body as string) as { code: string }).code === '482913'
+        ? { status: 200, body: me() }
+        : {
+            status: 400,
+            body: {
+              error: {
+                code: 'CODE_INVALID',
+                message: 'That code is not correct.',
+                fieldErrors: { code: ['Incorrect code. 4 attempts left.'] },
+              },
+            },
+          },
+    );
     const router = renderApp('/sign-up');
     await userEvent.type(await screen.findByLabelText(/Full name/), 'Shubham Patil');
     await userEvent.type(screen.getByLabelText(/Work email/), 'shubham@example.com');
     await userEvent.type(screen.getByLabelText(/Password/), 'Str0ng-Passw0rd!');
     await userEvent.click(screen.getByRole('button', { name: 'Create account' }));
+
+    expect(await screen.findByRole('heading', { name: 'Check your email' })).toBeInTheDocument();
+    expect(screen.getByText('shubham@example.com')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Send a new code in \d+s/ })).toBeDisabled();
+
+    // A wrong code shows the remaining attempts; six digits submit without a click.
+    await userEvent.type(screen.getByLabelText(/Verification code/), '111111');
+    expect(await screen.findByText('Incorrect code. 4 attempts left.')).toBeInTheDocument();
+    await userEvent.clear(screen.getByLabelText(/Verification code/));
+    await userEvent.type(screen.getByLabelText(/Verification code/), '482913');
+
     expect(await screen.findByRole('heading', { name: /Set up your company/ })).toBeInTheDocument();
     expect(router.state.location.pathname).toBe('/onboarding');
+  });
+
+  it('signing in before verifying opens the code screen', async () => {
+    server.on('GET', '/auth/me', unauthorized);
+    server.on('POST', '/auth/refresh', { status: 401 });
+    server.on('POST', '/auth/login', {
+      status: 403,
+      body: { error: { code: 'EMAIL_NOT_VERIFIED', message: 'Please verify your email first.' } },
+    });
+    const router = renderApp('/sign-in');
+    await userEvent.type(await screen.findByLabelText(/Email/), 'New@Example.com');
+    await userEvent.type(screen.getByLabelText(/Password/), 'Str0ng-Passw0rd!');
+    await userEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+    expect(await screen.findByRole('heading', { name: 'Check your email' })).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe('/verify-email');
+    expect(new URLSearchParams(router.state.location.search).get('email')).toBe('new@example.com');
+  });
+
+  it('sign-up from an invitation link sends the token and skips the code', async () => {
+    server.on('GET', '/auth/me', unauthorized);
+    server.on('POST', '/auth/refresh', { status: 401 });
+    server.on('POST', '/auth/register', { status: 201, body: me() });
+    server.on('GET', '/invitations/lookup', {
+      status: 200,
+      body: {
+        companyName: 'Patil Transport',
+        email: 'shubham@example.com',
+        role: 'VIEWER',
+        expired: false,
+        accepted: false,
+      },
+    });
+    const next = '/invitations/accept?token=invite-token-0123456789abcdef';
+    const router = renderApp(
+      `/sign-up?email=shubham%40example.com&next=${encodeURIComponent(next)}`,
+    );
+    await userEvent.type(await screen.findByLabelText(/Full name/), 'Shubham Patil');
+    await userEvent.type(screen.getByLabelText(/Password/), 'Str0ng-Passw0rd!');
+    await userEvent.click(screen.getByRole('button', { name: 'Create account' }));
+    expect(await screen.findByRole('button', { name: 'Join Patil Transport' })).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe('/invitations/accept');
+    const call = server.calls.find((c) => c.path === '/auth/register')!;
+    expect(call.body).toMatchObject({ invitationToken: 'invite-token-0123456789abcdef' });
   });
 
   it('creating a company opens its dashboard', async () => {

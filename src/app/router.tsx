@@ -40,6 +40,10 @@ export const routes: RouteObject[] = [
       { path: '/sign-in', element: <SignInPage /> },
       { path: '/sign-up', element: <SignUpPage /> },
       {
+        path: '/verify-email',
+        ...page(() => import('@/features/auth/VerifyEmailPage'), 'VerifyEmailPage'),
+      },
+      {
         path: '/forgot-password',
         ...page(() => import('@/features/auth/PasswordResetPages'), 'ForgotPasswordPage'),
       },
@@ -95,6 +99,10 @@ export const routes: RouteObject[] = [
           {
             path: 'billing',
             ...page(() => import('@/features/billing/BillingPage'), 'BillingPage'),
+          },
+          {
+            path: 'profile',
+            ...page(() => import('@/features/account/ProfilePage'), 'ProfilePage'),
           },
           {
             path: 'settings',

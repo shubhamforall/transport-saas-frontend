@@ -56,3 +56,11 @@ Record each decision with date, choice, rationale and impact.
 
 - **Choice:** Money is formatted from integer paise with `en-IN` grouping (₹2,48,500.00); dates
   default to `Asia/Kolkata`.
+
+## 2026-11-01 — Email verification screen
+
+- **Choice:** `/verify-email?email=…&next=…` after sign-up (and after signing in to an unverified
+  account). One numeric field with `autocomplete="one-time-code"`; it submits by itself at 6
+  digits. "Send a new code" is disabled for 60 seconds. Sign-up from an invitation link sends the
+  invitation token so the code is skipped.
+- Signed-in visitors on sign-in/up pages now follow a safe `?next=` instead of always going home.

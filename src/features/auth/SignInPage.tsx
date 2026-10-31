@@ -6,9 +6,10 @@ import { AuthLayout } from '@/components/layout/AuthLayout';
 import { Button } from '@/components/ui/Button';
 import { TextField } from '@/components/ui/Field';
 import { Notice } from '@/components/ui/Feedback';
+import { ApiError } from '@/lib/api';
 import { applyServerErrors } from '@/lib/form-errors';
 import { authApi } from './api';
-import { safeNextPath } from './safe-next';
+import { safeNextPath, verifyEmailPath } from './safe-next';
 import { signInSchema, type SignInValues } from './schemas';
 import { homePathFor, useSetSession } from './session';
 
@@ -32,6 +33,10 @@ export function SignInPage() {
       setSession(me);
       navigate(safeNextPath(params.get('next')) ?? homePathFor(me), { replace: true });
     } catch (err) {
+      if (err instanceof ApiError && err.code === 'EMAIL_NOT_VERIFIED') {
+        navigate(verifyEmailPath(values.email.trim().toLowerCase(), params.get('next')));
+        return;
+      }
       setFormError(applyServerErrors(err, setError, ['email', 'password']));
     }
   });

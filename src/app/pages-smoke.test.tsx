@@ -507,6 +507,7 @@ const pages: [string, RegExp][] = [
   [`${base}/team`, /^Team$/],
   [`${base}/billing`, /Billing & plan/],
   [`${base}/settings`, /Company settings/],
+  [`${base}/profile`, /My profile/],
   ['/platform/tenants', /^Companies$/],
   [`/platform/tenants/${T}`, /Patil Transport Co\./],
   ['/platform/plans', /^Plans$/],

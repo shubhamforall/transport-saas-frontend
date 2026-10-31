@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router';
 import { useQueryClient } from '@tanstack/react-query';
-import { LogOut, Menu, Plus, ShieldCheck, X } from 'lucide-react';
+import { CreditCard, Menu, Plus, X } from 'lucide-react';
 import { useCurrentTenant } from '@/features/tenants/tenant-context';
 import { CreateCompanyModal } from '@/features/tenants/CreateCompanyModal';
 import { useTenantQuery } from '@/features/tenants/use-tenant-api';
@@ -10,10 +10,9 @@ import { lastTenant, useSession, useSetSession } from '@/features/auth/session';
 import { authApi } from '@/features/auth/api';
 import { useToast } from '@/components/ui/toast-context';
 import { cn } from '@/lib/cn';
-import { initials } from '@/lib/format';
-import { ROLE_LABELS } from '@/lib/roles';
 import { Brand } from './Brand';
 import { NAV, navLabelFor } from './nav';
+import { ProfileMenu } from './ProfileMenu';
 
 function useSignOut() {
   const qc = useQueryClient();
@@ -115,38 +114,67 @@ function SidebarNav({ compact, onNavigate }: { compact: boolean; onNavigate?: ()
   );
 }
 
-function UserFooter({ compact }: { compact: boolean }) {
-  const { data: session } = useSession();
+const shortDate = (iso: string) =>
+  new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+
+/** Current plan in the sidebar corner, linking to Billing. */
+function PlanCard({ compact }: { compact: boolean }) {
   const { tenant } = useCurrentTenant();
-  const signOut = useSignOut();
-  const name = session?.user.name ?? '';
+  const { data } = useTenantQuery<SubscriptionSummary>(['subscription'], '/subscription');
+  const sub = data?.subscription;
+  if (!sub) return null;
+  const readOnly = data.access.mode === 'READ_ONLY';
+  const status = readOnly
+    ? 'Read-only · choose a plan'
+    : sub.status === 'TRIAL'
+      ? `Free trial${sub.trialEndsAt ? ` · ends ${shortDate(sub.trialEndsAt)}` : ''}`
+      : sub.status === 'PAST_DUE'
+        ? 'Payment due'
+        : sub.status === 'PENDING'
+          ? 'Waiting for payment'
+          : sub.cancelAtPeriodEnd && sub.currentPeriodEnd
+            ? `Ends ${shortDate(sub.currentPeriodEnd)}`
+            : 'Active';
+  const tone = readOnly
+    ? 'border-red-200 bg-red-50 text-red-700'
+    : sub.status === 'ACTIVE'
+      ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+      : 'border-blue-200 bg-blue-50 text-blue-700';
+
+  if (compact) {
+    return (
+      <NavLink
+        to={`/t/${tenant.id}/billing`}
+        title={`${sub.plan.name} plan · ${status}`}
+        className={cn(
+          'mt-auto grid h-9 place-items-center rounded-lg border text-[10px] font-extrabold',
+          tone,
+        )}
+      >
+        <CreditCard className="size-4" aria-hidden />
+        <span className="sr-only">
+          {sub.plan.name} plan, {status}
+        </span>
+      </NavLink>
+    );
+  }
   return (
-    <div
-      className={cn(
-        'mt-auto flex items-center gap-2.5 border-t border-line px-2 pt-4 text-xs',
-        compact && 'flex-col',
-      )}
+    <NavLink
+      to={`/t/${tenant.id}/billing`}
+      className="mt-auto block rounded-xl border border-line p-3 transition-colors hover:border-blue-200 hover:bg-slate-50"
     >
-      <div
-        aria-hidden
-        className="grid size-8.5 shrink-0 place-items-center rounded-full bg-blue-100 font-extrabold text-blue-700"
+      <p className="text-[11px] font-semibold text-muted">Current plan</p>
+      <p className="mt-0.5 text-[15px] font-bold text-ink">{sub.plan.name}</p>
+      <span
+        className={cn(
+          'mt-2 inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[11px] font-bold',
+          tone,
+        )}
       >
-        {initials(name)}
-      </div>
-      <div className={cn('min-w-0 flex-1', compact && 'sr-only')}>
-        <p className="truncate font-bold">{name}</p>
-        <p className="mt-0.5 text-subtle">{ROLE_LABELS[tenant.myRole]}</p>
-      </div>
-      <button
-        type="button"
-        onClick={() => void signOut()}
-        aria-label="Sign out"
-        title="Sign out"
-        className="rounded-md p-1.5 text-muted hover:bg-slate-100 hover:text-slate-800"
-      >
-        <LogOut className="size-4" />
-      </button>
-    </div>
+        <span aria-hidden>●</span> {status}
+      </span>
+      <p className="mt-2 text-[11px] font-semibold text-brand">View plans →</p>
+    </NavLink>
   );
 }
 
@@ -199,9 +227,10 @@ function ReadOnlyBanner() {
   );
 }
 
-/** Responsive shell: full sidebar on desktop, icon rail on tablet, drawer on phones. */ export function AppShell() {
+/** Responsive shell: full sidebar on desktop, icon rail on tablet, drawer on phones. */
+export function AppShell() {
   const { tenant } = useCurrentTenant();
-  const { data: session } = useSession();
+  const signOut = useSignOut();
   const location = useLocation();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
@@ -210,7 +239,7 @@ function ReadOnlyBanner() {
     setCreateOpen(true);
   };
   const segment = location.pathname.split('/')[3];
-  const pageLabel = navLabelFor(segment);
+  const pageLabel = segment === 'profile' ? 'My profile' : navLabelFor(segment);
 
   useEffect(() => {
     document.title = `${pageLabel} · ${tenant.name} · Vaharo`;
@@ -238,7 +267,7 @@ function ReadOnlyBanner() {
         <nav aria-label="Main" className="flex flex-col gap-6">
           <SidebarNav compact />
         </nav>
-        <UserFooter compact />
+        <PlanCard compact />
       </aside>
 
       {/* Desktop sidebar */}
@@ -248,10 +277,7 @@ function ReadOnlyBanner() {
         <nav aria-label="Main" className="flex flex-col gap-6">
           <SidebarNav compact={false} />
         </nav>
-        <div className="mt-auto px-2">
-          <PlanPill />
-        </div>
-        <UserFooter compact={false} />
+        <PlanCard compact={false} />
       </aside>
 
       {/* Phone drawer */}
@@ -284,7 +310,7 @@ function ReadOnlyBanner() {
             <nav aria-label="Main" className="flex flex-col gap-6">
               <SidebarNav compact={false} onNavigate={() => setDrawerOpen(false)} />
             </nav>
-            <UserFooter compact={false} />
+            <PlanCard compact={false} />
           </div>
         </div>
       )}
@@ -308,31 +334,17 @@ function ReadOnlyBanner() {
             </p>
           </div>
           <div className="flex items-center gap-4 text-[13px]">
-            <PlanPill className="max-sm:hidden" />
-            {session?.user.isPlatformAdmin && (
-              <NavLink
-                to="/platform"
-                className="inline-flex items-center gap-1 font-semibold text-slate-600 hover:text-ink max-md:hidden"
-              >
-                <ShieldCheck className="size-4" aria-hidden /> Super Admin
-              </NavLink>
-            )}
-            {session && (
-              <button
-                type="button"
-                onClick={openCreate}
-                className="inline-flex items-center gap-1 font-semibold text-brand hover:underline max-md:hidden"
-                title="Create another company"
-              >
-                <Plus className="size-4" aria-hidden /> New company
-              </button>
-            )}
-            <div
-              aria-hidden
-              className="grid size-8.5 place-items-center rounded-full bg-blue-100 text-xs font-extrabold text-blue-700"
+            {/* The sidebar shows the plan on desktop; smaller screens get the pill here. */}
+            <PlanPill className="max-sm:hidden lg:hidden" />
+            <button
+              type="button"
+              onClick={openCreate}
+              className="inline-flex items-center gap-1 font-semibold text-brand hover:underline max-md:hidden"
+              title="Create another company"
             >
-              {initials(session?.user.name ?? '')}
-            </div>
+              <Plus className="size-4" aria-hidden /> New company
+            </button>
+            <ProfileMenu onNewCompany={openCreate} onSignOut={() => void signOut()} />
           </div>
         </header>
         <ReadOnlyBanner />

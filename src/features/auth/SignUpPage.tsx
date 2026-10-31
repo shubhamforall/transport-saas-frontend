@@ -7,10 +7,10 @@ import { Button } from '@/components/ui/Button';
 import { TextField } from '@/components/ui/Field';
 import { Notice } from '@/components/ui/Feedback';
 import { applyServerErrors } from '@/lib/form-errors';
-import { authApi } from './api';
+import { authApi, isPendingVerification } from './api';
 import { signUpSchema, type SignUpValues } from './schemas';
 import { useSetSession } from './session';
-import { safeNextPath } from './safe-next';
+import { invitationTokenFrom, safeNextPath, verifyEmailPath } from './safe-next';
 
 export function SignUpPage() {
   const navigate = useNavigate();
@@ -31,10 +31,15 @@ export function SignUpPage() {
   const onSubmit = handleSubmit(async (values) => {
     setFormError(null);
     try {
-      const me = await authApi.register(values);
-      setSession(me);
-      // Invitation links come back here via ?next=; everyone else sets up a company.
-      navigate(safeNextPath(params.get('next')) ?? '/onboarding', { replace: true });
+      const next = params.get('next');
+      const res = await authApi.register({ ...values, invitationToken: invitationTokenFrom(next) });
+      if (isPendingVerification(res)) {
+        navigate(verifyEmailPath(res.email, next, res.emailSent));
+        return;
+      }
+      // Signed up from an invitation: the email is already proven, go straight back to it.
+      setSession(res);
+      navigate(safeNextPath(next) ?? '/onboarding', { replace: true });
     } catch (err) {
       setFormError(applyServerErrors(err, setError, ['name', 'email', 'password']));
     }
@@ -43,7 +48,7 @@ export function SignUpPage() {
   return (
     <AuthLayout
       title="Create your account"
-      description="Start by creating your login. You'll set up your company next."
+      description="Start by creating your login. We'll email you a code to confirm it's you."
       footer={
         <>
           Already have an account?{' '}
