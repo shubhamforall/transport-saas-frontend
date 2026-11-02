@@ -17,7 +17,7 @@ const NAV = [
 export function PlatformLayout() {
   const { data: session, isPending } = useSession();
   if (isPending) return <Spinner />;
-  if (!session?.user.isPlatformAdmin) return <Navigate to="/" replace />;
+  if (!session?.user.isPlatformAdmin) return <Navigate to="/app" replace />;
   return (
     <div className="min-h-screen">
       <header className="border-b border-line bg-navy text-white">
@@ -29,7 +29,7 @@ export function PlatformLayout() {
             </span>
           </div>
           <Link
-            to="/"
+            to="/app"
             className="inline-flex items-center gap-1.5 text-xs font-semibold text-white/80 hover:text-white"
           >
             <ArrowLeft className="size-3.5" aria-hidden /> Back to my workspace

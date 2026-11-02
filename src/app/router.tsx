@@ -31,9 +31,29 @@ const newInvoice = () => import('@/features/invoices/NewInvoicePage');
 const invoiceEditor = () => import('@/features/invoices/InvoiceEditorPage');
 const invoiceDetail = () => import('@/features/invoices/InvoiceDetailPage');
 const platform = () => import('@/features/platform/PlatformPages');
+const marketing = () => import('@/features/marketing/MarketingLayout');
+const info = () => import('@/features/marketing/InfoPages');
+const legal = () => import('@/features/marketing/LegalPages');
 
 export const routes: RouteObject[] = [
-  { path: '/', element: <HomeRedirect /> },
+  // Public website.
+  {
+    ...page(marketing, 'MarketingLayout'),
+    children: [
+      { path: '/', ...page(() => import('@/features/marketing/HomePage'), 'HomePage') },
+      { path: '/features', ...page(info, 'FeaturesPage') },
+      { path: '/pricing', ...page(info, 'PricingPage') },
+      { path: '/about', ...page(info, 'AboutPage') },
+      {
+        path: '/contact',
+        ...page(() => import('@/features/marketing/ContactPage'), 'ContactPage'),
+      },
+      { path: '/privacy', ...page(legal, 'PrivacyPage') },
+      { path: '/terms', ...page(legal, 'TermsPage') },
+    ],
+  },
+  // "Go to my workspace": the right company for signed-in users, else sign-in.
+  { path: '/app', element: <HomeRedirect /> },
   {
     element: <RedirectIfSignedIn />,
     children: [

@@ -53,7 +53,7 @@ export function TenantLayout() {
           }
           action={
             notFound || suspended ? (
-              <Link to="/" className="text-sm font-semibold text-brand hover:underline">
+              <Link to="/app" className="text-sm font-semibold text-brand hover:underline">
                 Go to my workspace
               </Link>
             ) : (

@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
-import { Brand } from './Brand';
+import { Link } from 'react-router';
+import { Brand, BRAND_NAME } from './Brand';
 
 interface AuthLayoutProps {
   title: string;
@@ -12,9 +13,9 @@ interface AuthLayoutProps {
 export function AuthLayout({ title, description, children, footer }: AuthLayoutProps) {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center px-4 py-10">
-      <div className="mb-8">
+      <Link to="/" className="mb-8" aria-label={`${BRAND_NAME} home`}>
         <Brand />
-      </div>
+      </Link>
       <main className="w-full max-w-md rounded-card border border-line bg-white shadow-card">
         <div className="border-b border-line px-6 py-5">
           <h1 className="text-xl font-bold tracking-tight">{title}</h1>

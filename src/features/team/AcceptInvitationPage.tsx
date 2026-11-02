@@ -64,7 +64,7 @@ export function AcceptInvitationPage() {
     body = (
       <Notice>
         This invitation was already accepted.{' '}
-        <Link to="/" className="font-semibold underline">
+        <Link to="/app" className="font-semibold underline">
           Go to my workspace
         </Link>
       </Notice>

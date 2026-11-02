@@ -9,7 +9,7 @@ export function NotFoundPage() {
         description="The page you're looking for doesn't exist."
         action={
           <Link to="/" className="text-sm font-semibold text-brand hover:underline">
-            Go to my workspace
+            Go to the home page
           </Link>
         }
       />
